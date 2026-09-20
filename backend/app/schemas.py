@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
@@ -25,3 +27,12 @@ class UserOut(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class InvoiceOut(BaseModel):
+    id: int
+    filename: str
+    page_count: int
+    status: str
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
