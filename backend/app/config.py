@@ -22,3 +22,11 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", BASE_DIR / "uploads"))
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 MAX_PDF_PAGES = 20
+
+# extraction settings (Google Gemini)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODELS = [
+    m.strip()
+    for m in os.getenv("GEMINI_MODEL", "gemini-2.5-flash,gemini-3.5-flash").split(",")
+    if m.strip()
+]
