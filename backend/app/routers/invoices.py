@@ -1,14 +1,15 @@
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app import config
 from app.database import get_db
 from app.deps import get_current_user
 from app.file_utils import count_pdf_pages, detect_file_type
-from app.models import Invoice, User
-from app.schemas import InvoiceOut
+from app.models import Invoice, User, ValidationIssue
+from app.schemas import InvoiceDetailOut, InvoiceListOut, InvoiceOut
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -19,7 +20,6 @@ def upload_invoice(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # read at most limit + 1 bytes, so we can tell if the file is too big
     data = file.file.read(config.MAX_UPLOAD_BYTES + 1)
     if len(data) > config.MAX_UPLOAD_BYTES:
         max_mb = config.MAX_UPLOAD_BYTES / 1024 / 1024
@@ -50,7 +50,6 @@ def upload_invoice(
     else:
         pages = 1
 
-    # save under a random name; keep the original name only in the database
     stored_name = f"{current_user.id}/{uuid.uuid4().hex}.{kind}"
     path = config.UPLOAD_DIR / stored_name
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -70,6 +69,43 @@ def upload_invoice(
         db.refresh(invoice)
     except Exception:
         db.rollback()
-        path.unlink(missing_ok=True)  # do not leave an orphan file behind
+        path.unlink(missing_ok=True)
         raise
+    return invoice
+
+
+@router.get("", response_model=list[InvoiceListOut])
+def list_invoices(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    rows = (
+        db.query(Invoice, func.count(ValidationIssue.id).label("issue_count"))
+        .outerjoin(ValidationIssue, ValidationIssue.invoice_id == Invoice.id)
+        .filter(Invoice.user_id == current_user.id)
+        .group_by(Invoice.id)
+        .order_by(Invoice.created_at.desc())
+        .all()
+    )
+    results = []
+    for invoice, issue_count in rows:
+        item = InvoiceListOut.model_validate(invoice)
+        item.issue_count = issue_count
+        results.append(item)
+    return results
+
+
+@router.get("/{invoice_id}", response_model=InvoiceDetailOut)
+def get_invoice(
+    invoice_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    invoice = (
+        db.query(Invoice)
+        .filter(Invoice.id == invoice_id, Invoice.user_id == current_user.id)
+        .first()
+    )
+    if invoice is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
     return invoice
