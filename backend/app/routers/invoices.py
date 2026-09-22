@@ -55,7 +55,7 @@ def upload_invoice(
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
 
-    original_name = (file.filename or "invoice").replace("\\", "/").split("/")[-1][:255]
+    original_name = (file.filename or "invoice").replace("\\", "/").split("/")[-1][:255] or "invoice"
     invoice = Invoice(
         user_id=current_user.id,
         filename=original_name,

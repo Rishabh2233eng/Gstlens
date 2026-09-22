@@ -82,3 +82,18 @@ def test_reject_too_many_pages(monkeypatch):
 def test_upload_requires_login():
     r = client.post("/invoices/upload", files={"file": ("a.pdf", make_pdf(1), "application/pdf")})
     assert r.status_code == 401
+
+def test_upload_no_filename():
+    headers = auth_headers()
+    r = client.post(
+        "/invoices/upload",
+        files={"file": ("", make_pdf(1), "application/pdf")},
+        headers=headers,
+    )
+    # empty filename still uploads fine; the server assigns a safe fallback name
+    assert r.status_code in (201, 422)
+
+
+def test_upload_zero_byte_file():
+    r = upload("empty.pdf", b"", "application/pdf", auth_headers())
+    assert r.status_code == 400

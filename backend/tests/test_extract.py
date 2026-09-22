@@ -169,3 +169,19 @@ def test_extract_failure_marks_invoice_failed(monkeypatch):
     r = client.get(f"/invoices/{invoice_id}", headers=headers)
     assert r.json()["status"] == "failed"
     assert r.json()["error_message"] == "boom"
+
+def test_extract_corrupted_pdf_after_upload(monkeypatch, upload_dir):
+    headers, invoice_id = upload_one()
+    # simulate the stored file becoming corrupted between upload and extract
+    for f in upload_dir.rglob("*.pdf"):
+        f.write_bytes(b"%PDF-1.3\nnot really a pdf")
+
+    def boom(data, kind):
+        raise ExtractionError("Could not read this PDF. It may be corrupted")
+
+    monkeypatch.setattr(extract_router, "extract_invoice", boom)
+    r = client.post(f"/invoices/{invoice_id}/extract", headers=headers)
+    assert r.status_code == 502
+
+    detail = client.get(f"/invoices/{invoice_id}", headers=headers)
+    assert detail.json()["status"] == "failed"
