@@ -62,6 +62,6 @@ def is_valid_gstin(gstin: str | None) -> bool:
 
 
 def gstin_state_code(gstin: str | None) -> str | None:
-    if gstin and len(gstin) >= 2 and gstin[:2].isdigit():
+    if gstin and len(gstin) == 15 and gstin[:2].isdigit():
         return gstin[:2]
     return None
