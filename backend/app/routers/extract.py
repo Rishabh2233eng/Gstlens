@@ -11,6 +11,7 @@ from app.extractor import ExtractionError, extract_invoice
 from app.file_utils import detect_file_type
 from app.models import Invoice, InvoiceItem, User
 from app.schemas import InvoiceDetailOut
+from app.validation_pipeline import run_validation
 
 router = APIRouter(prefix="/invoices", tags=["extraction"])
 
@@ -38,7 +39,6 @@ def _apply_extraction(invoice: Invoice, result: ExtractedInvoice, db: Session) -
     invoice.total_amount = result.total_amount
     invoice.raw_json = result.model_dump()
 
-    # replace old items, in case this invoice is re-extracted
     for old_item in list(invoice.items):
         db.delete(old_item)
 
@@ -93,6 +93,8 @@ def extract(
         raise HTTPException(status_code=502, detail=str(e))
 
     _apply_extraction(invoice, result, db)
+    db.flush()  # so invoice.items is available for validation before commit
+    run_validation(db, invoice)
     invoice.status = "done"
     invoice.error_message = None
     db.commit()

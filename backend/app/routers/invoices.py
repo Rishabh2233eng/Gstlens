@@ -9,7 +9,7 @@ from app.database import get_db
 from app.deps import get_current_user
 from app.file_utils import count_pdf_pages, detect_file_type
 from app.models import Invoice, User, ValidationIssue
-from app.schemas import InvoiceDetailOut, InvoiceListOut, InvoiceOut
+from app.schemas import InvoiceDetailOut, InvoiceListOut, InvoiceOut, ValidationIssueOut
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -109,3 +109,19 @@ def get_invoice(
     if invoice is None:
         raise HTTPException(status_code=404, detail="Invoice not found")
     return invoice
+
+
+@router.get("/{invoice_id}/issues", response_model=list[ValidationIssueOut])
+def get_invoice_issues(
+    invoice_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    invoice = (
+        db.query(Invoice)
+        .filter(Invoice.id == invoice_id, Invoice.user_id == current_user.id)
+        .first()
+    )
+    if invoice is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    return invoice.issues

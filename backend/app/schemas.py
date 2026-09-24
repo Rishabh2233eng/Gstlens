@@ -86,3 +86,12 @@ class InvoiceDetailOut(BaseModel):
     created_at: datetime
     items: list[InvoiceItemOut]
     model_config = ConfigDict(from_attributes=True)
+
+
+class ValidationIssueOut(BaseModel):
+    id: int
+    code: str
+    severity: str
+    field: str | None
+    message: str
+    model_config = ConfigDict(from_attributes=True)
