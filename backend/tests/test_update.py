@@ -5,11 +5,6 @@ from tests.test_pipeline import VALID_GSTIN, clean_invoice  # noqa: F401
 from tests.test_upload import auth_headers, make_pdf, upload, upload_dir  # noqa: F401
 
 
-def extract_it(headers, invoice_id, **fields):
-    from app.routers import extract as extract_router as _er  # noqa
-    return None
-
-
 def setup_invoice(monkeypatch, **fields):
     monkeypatch.setattr(extract_router, "extract_invoice", lambda d, k: clean_invoice(**fields))
     headers, invoice_id = upload_one()
