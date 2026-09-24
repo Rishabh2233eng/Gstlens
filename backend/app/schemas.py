@@ -95,3 +95,29 @@ class ValidationIssueOut(BaseModel):
     field: str | None
     message: str
     model_config = ConfigDict(from_attributes=True)
+
+class InvoiceItemUpdate(BaseModel):
+    id: int | None = None  # omit for a new item, include to update an existing one
+    description: str | None = None
+    hsn_code: str | None = None
+    quantity: Decimal | None = None
+    unit_price: Decimal | None = None
+    taxable_value: Decimal | None = None
+    tax_rate: Decimal | None = None
+    tax_amount: Decimal | None = None
+    line_total: Decimal | None = None
+
+
+class InvoiceUpdate(BaseModel):
+    supplier_name: str | None = None
+    supplier_gstin: str | None = None
+    buyer_name: str | None = None
+    buyer_gstin: str | None = None
+    invoice_number: str | None = None
+    invoice_date: date | None = None
+    taxable_value: Decimal | None = None
+    cgst: Decimal | None = None
+    sgst: Decimal | None = None
+    igst: Decimal | None = None
+    total_amount: Decimal | None = None
+    items: list[InvoiceItemUpdate] | None = None  # omit to leave items unchanged
