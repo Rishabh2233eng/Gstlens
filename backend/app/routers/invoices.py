@@ -8,8 +8,15 @@ from app import config
 from app.database import get_db
 from app.deps import get_current_user
 from app.file_utils import count_pdf_pages, detect_file_type
-from app.models import Invoice, User, ValidationIssue
-from app.schemas import InvoiceDetailOut, InvoiceListOut, InvoiceOut, ValidationIssueOut
+from app.models import Invoice, InvoiceItem, User, ValidationIssue
+from app.schemas import (
+    InvoiceDetailOut,
+    InvoiceListOut,
+    InvoiceOut,
+    InvoiceUpdate,
+    ValidationIssueOut,
+)
+from app.validation_pipeline import run_validation
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -125,3 +132,51 @@ def get_invoice_issues(
     if invoice is None:
         raise HTTPException(status_code=404, detail="Invoice not found")
     return invoice.issues
+
+
+@router.patch("/{invoice_id}", response_model=InvoiceDetailOut)
+def update_invoice(
+    invoice_id: int,
+    payload: InvoiceUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    invoice = (
+        db.query(Invoice)
+        .filter(Invoice.id == invoice_id, Invoice.user_id == current_user.id)
+        .first()
+    )
+    if invoice is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    data = payload.model_dump(exclude_unset=True, exclude={"items"})
+    for field, value in data.items():
+        setattr(invoice, field, value)
+
+    if payload.items is not None:
+        existing_by_id = {item.id: item for item in invoice.items}
+        keep_ids = set()
+
+        for item_in in payload.items:
+            if item_in.id is not None and item_in.id in existing_by_id:
+                item = existing_by_id[item_in.id]
+                for field, value in item_in.model_dump(exclude_unset=True, exclude={"id"}).items():
+                    setattr(item, field, value)
+                keep_ids.add(item.id)
+            else:
+                new_item = InvoiceItem(
+                    invoice_id=invoice.id,
+                    **item_in.model_dump(exclude_unset=True, exclude={"id"}),
+                )
+                db.add(new_item)
+
+        for item in list(invoice.items):
+            if item.id is not None and item.id not in keep_ids and item.id in existing_by_id:
+                if not any(i.id == item.id for i in payload.items):
+                    db.delete(item)
+
+    db.flush()
+    run_validation(db, invoice)
+    db.commit()
+    db.refresh(invoice)
+    return invoice
