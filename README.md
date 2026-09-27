@@ -14,6 +14,8 @@ GST-aware invoice extraction and validation SaaS. Upload an invoice (PDF, JPG, P
 - Invoice upload with type, size and page-count checks
 - AI-based extraction of supplier, buyer, GSTINs, dates, amounts and line items
 - Invoice list and detail endpoints, extraction results stored in PostgreSQL
+- Validation engine: GSTIN checksum, tax calculation, place-of-supply, date sanity, and duplicate-invoice checks
+- Manual field/item correction with automatic revalidation
 
 ## Running locally
 ```bash

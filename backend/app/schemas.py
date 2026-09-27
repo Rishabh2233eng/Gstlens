@@ -96,6 +96,7 @@ class ValidationIssueOut(BaseModel):
     message: str
     model_config = ConfigDict(from_attributes=True)
 
+
 class InvoiceItemUpdate(BaseModel):
     id: int | None = None  # omit for a new item, include to update an existing one
     description: str | None = None
@@ -110,9 +111,9 @@ class InvoiceItemUpdate(BaseModel):
 
 class InvoiceUpdate(BaseModel):
     supplier_name: str | None = None
-    supplier_gstin: str | None = None
+    supplier_gstin: str | None = Field(default=None, max_length=15)
     buyer_name: str | None = None
-    buyer_gstin: str | None = None
+    buyer_gstin: str | None = Field(default=None, max_length=15)
     invoice_number: str | None = None
     invoice_date: date | None = None
     taxable_value: Decimal | None = None

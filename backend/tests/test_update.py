@@ -57,9 +57,6 @@ def test_update_partial_fields_only(monkeypatch):
 
 def test_update_existing_item(monkeypatch):
     headers, invoice_id = setup_invoice(monkeypatch)
-    detail = client.get(f"/invoices/{invoice_id}", headers=headers).json()
-    # clean_invoice has no items by default, so add one first via items=None path skip;
-    # instead directly add a new item through PATCH
     r = client.patch(
         f"/invoices/{invoice_id}",
         json={"items": [{"description": "Chair", "hsn_code": "9401"}]},
@@ -110,3 +107,13 @@ def test_cannot_update_other_users_invoice(monkeypatch):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 404
+
+
+def test_update_rejects_oversized_gstin(monkeypatch):
+    headers, invoice_id = setup_invoice(monkeypatch)
+    r = client.patch(
+        f"/invoices/{invoice_id}",
+        json={"supplier_gstin": "X" * 50},
+        headers=headers,
+    )
+    assert r.status_code == 422
