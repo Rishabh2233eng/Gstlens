@@ -1,4 +1,4 @@
-import { Link, Outlet } from "react-router-dom";
+]import { Link, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Layout() {
@@ -7,9 +7,15 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-slate-900 text-white">
       <header className="border-b border-slate-700 px-6 py-4 flex items-center justify-between">
-        <Link to="/" className="text-xl font-bold">
-          GSTLens
-        </Link>
+        <div className="flex items-center gap-6">
+          <Link to="/" className="text-xl font-bold">
+            GSTLens
+          </Link>
+          <nav className="flex gap-4 text-sm text-slate-300">
+            <Link to="/" className="hover:text-white">Dashboard</Link>
+            <Link to="/upload" className="hover:text-white">Upload</Link>
+          </nav>
+        </div>
         <div className="flex items-center gap-4 text-sm">
           {user && (
             <>

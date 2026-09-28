@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import Upload from "./pages/Upload";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
             }
           >
             <Route index element={<Dashboard />} />
+            <Route path="upload" element={<Upload />} />
           </Route>
         </Routes>
       </AuthProvider>
