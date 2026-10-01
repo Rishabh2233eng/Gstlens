@@ -22,3 +22,8 @@ export async function getIssues(id) {
   const res = await api.get(`/invoices/${id}/issues`);
   return res.data;
 }
+
+export async function listInvoices() {
+  const res = await api.get("/invoices");
+  return res.data;
+}

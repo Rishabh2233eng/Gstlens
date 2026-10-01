@@ -1,4 +1,4 @@
-]import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Layout() {
@@ -13,6 +13,7 @@ export default function Layout() {
           </Link>
           <nav className="flex gap-4 text-sm text-slate-300">
             <Link to="/" className="hover:text-white">Dashboard</Link>
+            <Link to="/invoices" className="hover:text-white">Invoices</Link>
             <Link to="/upload" className="hover:text-white">Upload</Link>
           </nav>
         </div>
