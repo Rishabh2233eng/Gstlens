@@ -27,3 +27,13 @@ export async function listInvoices() {
   const res = await api.get("/invoices");
   return res.data;
 }
+
+export async function getInvoice(id) {
+  const res = await api.get(`/invoices/${id}`);
+  return res.data;
+}
+
+export async function updateInvoice(id, payload) {
+  const res = await api.patch(`/invoices/${id}`, payload);
+  return res.data;
+}
