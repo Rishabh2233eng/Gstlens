@@ -26,20 +26,26 @@ def test_extract_returns_data(monkeypatch):
     )
     headers, invoice_id = upload_one()
     r = client.post(f"/invoices/{invoice_id}/extract", headers=headers)
-    assert r.status_code == 200
-    assert r.json()["supplier_name"] == "ABC Traders"
-    assert r.json()["total_amount"] == "1180.00"
-    assert r.json()["items"] == []
+    assert r.status_code == 202
+
+    detail = client.get(f"/invoices/{invoice_id}", headers=headers).json()
+    assert detail["supplier_name"] == "ABC Traders"
+    assert detail["total_amount"] == "1180.00"
+    assert detail["items"] == []
 
 
-def test_extract_provider_error_returns_502(monkeypatch):
+def test_extract_provider_error_marks_failed(monkeypatch):
     def boom(data, kind):
         raise ExtractionError("provider down")
 
     monkeypatch.setattr(extract_router, "extract_invoice", boom)
     headers, invoice_id = upload_one()
     r = client.post(f"/invoices/{invoice_id}/extract", headers=headers)
-    assert r.status_code == 502
+    assert r.status_code == 202
+
+    detail = client.get(f"/invoices/{invoice_id}", headers=headers).json()
+    assert detail["status"] == "failed"
+    assert detail["error_message"] == "provider down"
 
 
 def test_extract_unknown_invoice():
@@ -170,9 +176,9 @@ def test_extract_failure_marks_invoice_failed(monkeypatch):
     assert r.json()["status"] == "failed"
     assert r.json()["error_message"] == "boom"
 
+
 def test_extract_corrupted_pdf_after_upload(monkeypatch, upload_dir):
     headers, invoice_id = upload_one()
-    # simulate the stored file becoming corrupted between upload and extract
     for f in upload_dir.rglob("*.pdf"):
         f.write_bytes(b"%PDF-1.3\nnot really a pdf")
 
@@ -181,7 +187,7 @@ def test_extract_corrupted_pdf_after_upload(monkeypatch, upload_dir):
 
     monkeypatch.setattr(extract_router, "extract_invoice", boom)
     r = client.post(f"/invoices/{invoice_id}/extract", headers=headers)
-    assert r.status_code == 502
+    assert r.status_code == 202
 
     detail = client.get(f"/invoices/{invoice_id}", headers=headers)
     assert detail.json()["status"] == "failed"
