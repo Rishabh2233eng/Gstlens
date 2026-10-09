@@ -122,3 +122,6 @@ class InvoiceUpdate(BaseModel):
     igst: Decimal | None = None
     total_amount: Decimal | None = None
     items: list[InvoiceItemUpdate] | None = None  # omit to leave items unchanged
+
+class ExportRequest(BaseModel):
+    invoice_ids: list[int] = Field(min_length=1, max_length=500)

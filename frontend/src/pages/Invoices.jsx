@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { listInvoices } from "../api/invoices";
+import { exportBatchCsv, exportBatchExcel, listInvoices } from "../api/invoices";
 
 const STATUS_STYLES = {
   uploaded: "bg-slate-700 text-slate-200",
@@ -26,6 +26,7 @@ export default function Invoices() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [issuesOnly, setIssuesOnly] = useState(false);
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState(new Set());
 
   async function load() {
     setLoading(true);
@@ -43,6 +44,14 @@ export default function Invoices() {
   useEffect(() => {
     load();
   }, []);
+
+  function toggle(id) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
 
   const filtered = useMemo(() => {
     return invoices.filter((inv) => {
@@ -102,6 +111,22 @@ export default function Invoices() {
         >
           Refresh
         </button>
+        {selected.size > 0 && (
+          <>
+            <button
+              onClick={() => exportBatchExcel([...selected])}
+              className="px-3 py-2 rounded bg-green-700 hover:bg-green-600 text-sm"
+            >
+              Export {selected.size} to Excel
+            </button>
+            <button
+              onClick={() => exportBatchCsv([...selected])}
+              className="px-3 py-2 rounded bg-green-700 hover:bg-green-600 text-sm"
+            >
+              Export {selected.size} to Tally CSV
+            </button>
+          </>
+        )}
       </div>
 
       {error && <p className="text-red-400 mb-4">{error}</p>}
@@ -124,6 +149,7 @@ export default function Invoices() {
           <table className="w-full text-sm">
             <thead className="bg-slate-800 text-slate-300">
               <tr>
+                <th className="px-4 py-3 w-8"></th>
                 <th className="text-left px-4 py-3">Supplier</th>
                 <th className="text-left px-4 py-3">Invoice No.</th>
                 <th className="text-left px-4 py-3">Date</th>
@@ -136,8 +162,15 @@ export default function Invoices() {
               {filtered.map((inv) => (
                 <tr
                   key={inv.id}
-                  className="border-t border-slate-700 hover:bg-slate-800 cursor-pointer"
+                  className="border-t border-slate-700 hover:bg-slate-800"
                 >
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(inv.id)}
+                      onChange={() => toggle(inv.id)}
+                    />
+                  </td>
                   <td className="px-4 py-3">
                     <Link to={`/invoices/${inv.id}`} className="block">
                       {inv.supplier_name || <span className="text-slate-500">{inv.filename}</span>}

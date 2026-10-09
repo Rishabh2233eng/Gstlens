@@ -4,9 +4,9 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.routers import auth, extract, invoices
+from app.routers import auth, export, extract, invoices
 
-app = FastAPI(title="GSTLens API", version="0.5.0")
+app = FastAPI(title="GSTLens API", version="0.6.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,6 +19,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(invoices.router)
 app.include_router(extract.router)
+app.include_router(export.router)
 
 
 @app.get("/")
