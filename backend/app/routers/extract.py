@@ -1,10 +1,10 @@
 from datetime import date as date_type
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app import config
-from app.database import get_db
+from app.database import SessionLocal, get_db
 from app.deps import get_current_user
 from app.extraction_schema import ExtractedInvoice
 from app.extractor import ExtractionError, extract_invoice
@@ -58,9 +58,44 @@ def _apply_extraction(invoice: Invoice, result: ExtractedInvoice, db: Session) -
         )
 
 
-@router.post("/{invoice_id}/extract", response_model=InvoiceDetailOut)
+def _run_extraction_job(invoice_id: int) -> None:
+    db = SessionLocal()
+    try:
+        invoice = db.get(Invoice, invoice_id)
+        if invoice is None:
+            return
+
+        path = config.UPLOAD_DIR / invoice.file_path
+        if not path.exists():
+            invoice.status = "failed"
+            invoice.error_message = "The file is missing on the server"
+            db.commit()
+            return
+
+        data = path.read_bytes()
+        kind = detect_file_type(data)
+        try:
+            result = extract_invoice(data, kind)
+        except ExtractionError as e:
+            invoice.status = "failed"
+            invoice.error_message = str(e)
+            db.commit()
+            return
+
+        _apply_extraction(invoice, result, db)
+        db.flush()
+        run_validation(db, invoice)
+        invoice.status = "done"
+        invoice.error_message = None
+        db.commit()
+    finally:
+        db.close()
+
+
+@router.post("/{invoice_id}/extract", response_model=InvoiceDetailOut, status_code=202)
 def extract(
     invoice_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -80,23 +115,9 @@ def extract(
         raise HTTPException(status_code=404, detail=invoice.error_message)
 
     invoice.status = "processing"
-    db.commit()
-
-    data = path.read_bytes()
-    kind = detect_file_type(data)
-    try:
-        result = extract_invoice(data, kind)
-    except ExtractionError as e:
-        invoice.status = "failed"
-        invoice.error_message = str(e)
-        db.commit()
-        raise HTTPException(status_code=502, detail=str(e))
-
-    _apply_extraction(invoice, result, db)
-    db.flush()  # so invoice.items is available for validation before commit
-    run_validation(db, invoice)
-    invoice.status = "done"
     invoice.error_message = None
     db.commit()
     db.refresh(invoice)
+
+    background_tasks.add_task(_run_extraction_job, invoice_id)
     return invoice

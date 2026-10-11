@@ -98,7 +98,7 @@ class ValidationIssueOut(BaseModel):
 
 
 class InvoiceItemUpdate(BaseModel):
-    id: int | None = None  # omit for a new item, include to update an existing one
+    id: int | None = None
     description: str | None = None
     hsn_code: str | None = None
     quantity: Decimal | None = None
@@ -121,7 +121,15 @@ class InvoiceUpdate(BaseModel):
     sgst: Decimal | None = None
     igst: Decimal | None = None
     total_amount: Decimal | None = None
-    items: list[InvoiceItemUpdate] | None = None  # omit to leave items unchanged
+    items: list[InvoiceItemUpdate] | None = None
+
 
 class ExportRequest(BaseModel):
     invoice_ids: list[int] = Field(min_length=1, max_length=500)
+
+
+class UsageOut(BaseModel):
+    plan_name: str | None
+    monthly_limit: int
+    pages_used: int
+    pages_remaining: int

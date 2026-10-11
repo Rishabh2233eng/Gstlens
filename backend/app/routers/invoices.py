@@ -14,8 +14,10 @@ from app.schemas import (
     InvoiceListOut,
     InvoiceOut,
     InvoiceUpdate,
+    UsageOut,
     ValidationIssueOut,
 )
+from app.usage import get_or_create_usage, pages_remaining, record_usage
 from app.validation_pipeline import run_validation
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
@@ -57,6 +59,13 @@ def upload_invoice(
     else:
         pages = 1
 
+    remaining = pages_remaining(db, current_user)
+    if pages > remaining:
+        raise HTTPException(
+            status_code=402,
+            detail=f"This would use {pages} page(s), but only {remaining} remain on your plan this month. Upgrade your plan or wait for next month.",
+        )
+
     stored_name = f"{current_user.id}/{uuid.uuid4().hex}.{kind}"
     path = config.UPLOAD_DIR / stored_name
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -72,6 +81,7 @@ def upload_invoice(
     )
     try:
         db.add(invoice)
+        record_usage(db, current_user.id, pages)
         db.commit()
         db.refresh(invoice)
     except Exception:
@@ -100,6 +110,24 @@ def list_invoices(
         item.issue_count = issue_count
         results.append(item)
     return results
+
+
+@router.get("/usage/me", response_model=UsageOut)
+def get_my_usage(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.plan is None:
+        return UsageOut(plan_name=None, monthly_limit=0, pages_used=0, pages_remaining=0)
+    usage = get_or_create_usage(db, current_user.id)
+    db.commit()
+    remaining = max(current_user.plan.monthly_page_limit - usage.pages_used, 0)
+    return UsageOut(
+        plan_name=current_user.plan.name,
+        monthly_limit=current_user.plan.monthly_page_limit,
+        pages_used=usage.pages_used,
+        pages_remaining=remaining,
+    )
 
 
 @router.get("/{invoice_id}", response_model=InvoiceDetailOut)
