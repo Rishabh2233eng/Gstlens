@@ -3,8 +3,8 @@ from datetime import date as date_type
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app import config
-from app.database import SessionLocal, get_db
+from app import config, database
+from app.database import get_db
 from app.deps import get_current_user
 from app.extraction_schema import ExtractedInvoice
 from app.extractor import ExtractionError, extract_invoice
@@ -59,7 +59,7 @@ def _apply_extraction(invoice: Invoice, result: ExtractedInvoice, db: Session) -
 
 
 def _run_extraction_job(invoice_id: int) -> None:
-    db = SessionLocal()
+    db = database.SessionLocal()
     try:
         invoice = db.get(Invoice, invoice_id)
         if invoice is None:
