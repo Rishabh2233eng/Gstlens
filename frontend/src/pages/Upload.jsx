@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { extractInvoice, getIssues, uploadInvoice } from "../api/invoices";
+import { friendlyError as errorText } from "../api/client";
+import { extractInvoice, getIssues, uploadInvoice, waitForExtraction } from "../api/invoices";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = ["application/pdf", "image/png", "image/jpeg"];
@@ -14,14 +15,6 @@ const STATUS = {
 };
 
 let nextId = 1;
-
-function errorText(err) {
-  const detail = err.response?.data?.detail;
-  if (typeof detail === "string") return detail;
-  if (Array.isArray(detail)) return detail.map((d) => d.msg).join(", ");
-  if (!err.response) return "Cannot reach the server";
-  return `Server error (${err.response.status})`;
-}
 
 export default function Upload() {
   const [items, setItems] = useState([]);
@@ -43,6 +36,11 @@ export default function Upload() {
       uploaded = true;
       patch(entry.id, { status: "extracting", progress: 100, invoiceId: invoice.id });
       await extractInvoice(invoice.id);
+      const finished = await waitForExtraction(invoice.id);
+      if (finished.status === "failed") {
+        patch(entry.id, { status: "failed", error: finished.error_message || "Extraction failed" });
+        return;
+      }
       const issues = await getIssues(invoice.id);
       patch(entry.id, { status: "done", issueCount: issues.length });
     } catch (err) {

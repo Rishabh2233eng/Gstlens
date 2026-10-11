@@ -26,3 +26,12 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+export function friendlyError(err) {
+  const detail = err.response?.data?.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) return detail.map((d) => d.msg).join(", ");
+  if (!err.response) return "Cannot reach the server. Check your connection and try again.";
+  if (err.response.status === 500) return "Something went wrong on our end. Please try again.";
+  return `Error (${err.response.status})`;
+}

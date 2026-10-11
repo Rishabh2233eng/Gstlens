@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getInvoice, getIssues, updateInvoice } from "../api/invoices";
+import { friendlyError as errorText } from "../api/client";
+import { exportOneCsv, exportOneExcel, getInvoice, getIssues, updateInvoice } from "../api/invoices";
 
 const FIELDS = [
   { key: "supplier_name", label: "Supplier name" },
@@ -15,14 +16,6 @@ const FIELDS = [
   { key: "igst", label: "IGST", type: "number" },
   { key: "total_amount", label: "Total amount", type: "number" },
 ];
-
-function errorText(err) {
-  const detail = err.response?.data?.detail;
-  if (typeof detail === "string") return detail;
-  if (Array.isArray(detail)) return detail.map((d) => d.msg).join(", ");
-  if (!err.response) return "Cannot reach the server";
-  return `Server error (${err.response.status})`;
-}
 
 export default function InvoiceDetail() {
   const { id } = useParams();
@@ -99,7 +92,21 @@ export default function InvoiceDetail() {
       <Link to="/invoices" className="text-blue-400 text-sm">← Back to invoices</Link>
       <div className="flex items-center justify-between mt-2 mb-4">
         <h1 className="text-2xl font-bold">{invoice.filename}</h1>
-        <span className="px-2 py-1 rounded text-xs bg-slate-800">{invoice.status}</span>
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-1 rounded text-xs bg-slate-800">{invoice.status}</span>
+          <button
+            onClick={() => exportOneExcel(id)}
+            className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-xs"
+          >
+            Export Excel
+          </button>
+          <button
+            onClick={() => exportOneCsv(id)}
+            className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-xs"
+          >
+            Export Tally CSV
+          </button>
+        </div>
       </div>
 
       {invoice.error_message && (

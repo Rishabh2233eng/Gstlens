@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { friendlyError } from "../api/client";
 import { exportBatchCsv, exportBatchExcel, listInvoices } from "../api/invoices";
 
 const STATUS_STYLES = {
@@ -35,7 +36,7 @@ export default function Invoices() {
       const data = await listInvoices();
       setInvoices(data);
     } catch (err) {
-      setError("Could not load invoices. Is the server running?");
+      setError(friendlyError(err));
     } finally {
       setLoading(false);
     }
