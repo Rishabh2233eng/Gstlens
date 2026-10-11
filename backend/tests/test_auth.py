@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.database import Base, get_db
+from app.database import Base, get_db, get_session_factory
 from app.main import app
 from app.models import Plan
 
@@ -24,7 +24,13 @@ def override_get_db():
         db.close()
 
 
+def override_get_session_factory():
+    return TestingSession
+
+
 app.dependency_overrides[get_db] = override_get_db
+app.dependency_overrides[get_session_factory] = override_get_session_factory
+
 client = TestClient(app)
 
 USER = {"email": "Test@Example.com", "password": "strongpass123", "full_name": "Test User"}

@@ -1,10 +1,11 @@
 from datetime import date as date_type
+from typing import Callable
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app import config, database
-from app.database import get_db
+from app import config
+from app.database import get_db, get_session_factory
 from app.deps import get_current_user
 from app.extraction_schema import ExtractedInvoice
 from app.extractor import ExtractionError, extract_invoice
@@ -58,8 +59,8 @@ def _apply_extraction(invoice: Invoice, result: ExtractedInvoice, db: Session) -
         )
 
 
-def _run_extraction_job(invoice_id: int) -> None:
-    db = database.SessionLocal()
+def _run_extraction_job(invoice_id: int, session_factory: Callable[[], Session]) -> None:
+    db = session_factory()
     try:
         invoice = db.get(Invoice, invoice_id)
         if invoice is None:
@@ -97,6 +98,7 @@ def extract(
     invoice_id: int,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    session_factory: Callable[[], Session] = Depends(get_session_factory),
     current_user: User = Depends(get_current_user),
 ):
     invoice = (
@@ -119,5 +121,5 @@ def extract(
     db.commit()
     db.refresh(invoice)
 
-    background_tasks.add_task(_run_extraction_job, invoice_id)
+    background_tasks.add_task(_run_extraction_job, invoice_id, session_factory)
     return invoice
